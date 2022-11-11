@@ -59,6 +59,7 @@ sizeSlider.onchange = (e) => changeSize(e.target.value)
 bgColorPicker.oninput = (e) => setbackgroundColor(e.target.value)
 
 let grab = false
+let fill = false
 let mouseDown = false
 document.body.onmousedown = () => (mouseDown = true)
 document.body.onmouseup = () => (mouseDown = false)
@@ -81,6 +82,7 @@ function reloadGrid() {
 function clearGrid() {
     grid.innerHTML = ''
     bgColorPicker.value = DEFAULT_BG_COLOR
+    backgroundColor = DEFAULT_BG_COLOR
 }
 
 function setupGrid(size) {
@@ -170,7 +172,7 @@ function changeColor(e) {
 
         return
     }
-    if ((e.type === 'mouseover' && !mouseDown) || grab) return
+    if ((e.type === 'mouseover' && !mouseDown) || grab || fill) return
     e.target.setAttribute("inked", true)
     e.target.setAttribute("data-shade", "0")
     if (currentMode === 'rainbow') {
@@ -188,19 +190,73 @@ function changeColor(e) {
 
 function setGrabber(e) {
     if (grab) {
-        currentColor = e.target.style.backgroundColor
+        setCurrentColor(e.target.style.backgroundColor)
         colorPicker.value = RGBToHex(currentColor)
-        grabber.classList.remove('active')
         grab = false
+        grabber.classList.remove('active')
     }
 }
 
 function grabColor() {
+    if (grab) {
+        grab = false
+        grabber.classList.remove('active')
+        return
+    }
     grab = true
     grabber.classList.add('active')
     gridItems = grid.children
     for (let i = 0; i < gridItems.length; i++) {
         gridItems[i].addEventListener('click', setGrabber)
+    }
+}
+
+function toMatrix(arr, width) {
+    return arr.reduce(function (rows, key, index) {
+        return (index % width == 0 ? rows.push([key]) : rows[rows.length - 1].push(key)) && rows;
+    }, []);
+}
+
+function setFillColor(gridItemsArray2D, X, Y) {
+    element = gridItemsArray2D[X][Y]
+    if (element.getAttribute('inked') === 'true') {
+        return
+    }
+    element.style.backgroundColor = currentColor
+    element.setAttribute('inked', 'true')
+    setFillColor(gridItemsArray2D, X, Y + 1)
+    setFillColor(gridItemsArray2D, X + 1, Y)
+    setFillColor(gridItemsArray2D, X - 1, Y)
+    setFillColor(gridItemsArray2D, X, Y - 1)
+}
+
+function setFill(e) {
+    if (fill) {
+        let gridItemsArray = Array.from(grid.children)
+        let ogIndex = gridItemsArray.indexOf(e.target)
+        let gridItemsArray2D = toMatrix(gridItemsArray, currentSize)
+        let gridX = Math.floor(ogIndex / currentSize)
+        let gridY = ogIndex % currentSize
+        setFillColor(gridItemsArray2D, gridX, gridY)
+        fill = false
+        filler.classList.remove('active')
+    }
+}
+
+function fillColor() {
+    if (grab) {
+        grab = false
+        grabber.classList.remove('active')
+    }
+    if (fill) {
+        fill = false
+        filler.classList.remove('active')
+    }
+    fill = true
+    filler.classList.add('active')
+    gridItems = grid.children
+    for (let i = 0; i < gridItems.length; i++) {
+        gridItems[i].addEventListener('click', setFill)
     }
 }
 
